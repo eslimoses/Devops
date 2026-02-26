@@ -1,0 +1,44 @@
+name: Train App CI-CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  build:
+    name: Build Docker Image
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Build image inside Minikube
+        run: |
+          minikube image build -t train-ticket-app:latest .
+
+  deploy:
+    name: Deploy to Kubernetes
+    runs-on: self-hosted
+    needs: build # Adding needs maked the pipeline a dependent to the stage specified.
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Deploy to cluster
+        run: |
+          kubectl apply -f k8s/
+
+  verify:
+    name: Verify Deployment
+    runs-on: self-hosted
+    needs: deploy
+
+    steps:
+      - name: Check rollout status
+        run: |
+          kubectl rollout status deployment/train-app
+          kubectl get pods
